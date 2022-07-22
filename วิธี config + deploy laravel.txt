@@ -1,0 +1,175 @@
+วิธี config phpmyadmin
+1.sudo apt install phpmyadmin
+2. แก้ไฟล์ /etc/nginx/snippets/phpmyadmin.conf
+เป็น 
+location /phpmyadmin {
+    root /usr/share/;
+    index index.php index.html index.htm;
+    location ~ ^/phpmyadmin/(.+\.php)$ {
+        try_files $uri =404;
+        root /usr/share/;
+        fastcgi_pass unix:/run/php/php8.0-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include /etc/nginx/fastcgi_params;
+    }
+
+    location ~* ^/phpmyadmin/(.+\.(jpg|jpeg|gif|css|png|js|ico|html|xml|txt))$ {
+        root /usr/share/;
+    }
+}
+
+3.ปรับไฟล์ /etc/nginx/sites-available/default
+เป็น
+server {
+    . . .
+
+    include snippets/phpmyadmin.conf;
+
+    . . .
+}
+4. sudo service nginx restart
+5. เข้าใช้งาน https://domain.com/phpmyadmin 
+6. error 413 – Request Entity Too Large
+แก้โดย
+6.1 แก้ไฟล์ /etc/nginx/nginx.conf
+client_max_body_size 2M;
+6.2 แก้ไฟล์  php.ini
+;This sets the maximum amount of memory in bytes that a script is allowed to allocate
+memory_limit = 32M
+
+;The maximum size of an uploaded file.
+upload_max_filesize = 2M
+
+;Sets max size of post data allowed. This setting also affects file upload. To upload large files, this value must be larger than upload_max_filesize
+post_max_size = 3M
+6.3 sudo service php7.4-fpm restart      // php 7.4.x
+
+7. import db
+8. สร้าง account root สำหรับเข้า mysql 
+CREATE USER 'username'@'%' IDENTIFIED BY 'the_password'; //สร้าง
+GRANT ALL PRIVILEGES ON *.* TO 'username'@'%' WITH GRANT OPTION; //สิทธิ์เข้าใช้งาน
+FLUSH PRIVILEGES;
+
+9. เมื่อปรับแก้อะไรก็ตาม ให้ reload nginx ทุกครั้ง
+sudo systemctl reload nginx
+
+วิธี Deploy laravel 
+* ทำได้เฉพาะสิทธิ์ super user เท่านั้น
+0.sudo su
+0.1 กำหนดสิทธิ์ /var/www/ เป็น 777 
+sudo chmod -R 777 /var/www
+
+1. วาง project ไว้ที่ /var/www/
+2. cd เข้าไปที่ project
+2.1 composer install
+2.2 cp .env.example .env 
+
+APP_NAME=TravelList
+APP_ENV=development
+APP_KEY=APPLICATION_UNIQUE_KEY_DONT_COPY
+APP_DEBUG=true
+APP_URL=http://domain_or_IP
+
+LOG_CHANNEL=stack
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=travel_list
+DB_USERNAME=travel_user
+DB_PASSWORD=password
+
+2.3 php artisan key:generate
+2.4 sudo nano /var/www/html/quickstart/.env //แก้ส่วน connect mysql
+2.5 set permission ให้ storage
+- sudo chmod -R 777 storage
+- sudo chmod -R 755 bootstrap/cache
+3. สร้าง config กับ nginx
+3.1 cd ไปที่ /etc/nginx/sites-available/default
+3.2 sudo chown -R www-data.www-data /var/www/pos/storage
+    sudo chown -R www-data.www-data /var/www/pos/bootstrap/cache
+3.3 sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/pos
+แก้ไฟล์ /etc/nginx/sites-available/pos
+เป็น 
+server {
+    listen 8080;
+    server_name 192.168.0.113;
+    root /var/www/pos/public;
+
+    # add_header Access-Control-Allow-Origin *;
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-XSS-Protection "1; mode=block";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.html index.htm index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+3.4 sudo ln -s /etc/nginx/sites-available/pos /etc/nginx/sites-enabled/
+*ถ้าขึ้นว่ามีไฟล์นี้แล้ว ให้ลบก่อน แล้วให้ทำ 3.4 อีกรอบ
+คำสั่งลบ sudo rm -rf /etc/nginx/sites-enabled/pos
+3.5 sudo nginx -t
+3.6 sudo systemctl reload nginx
+4. ลองเข้า http://_ip_:port/api
+ex. 
+http://192.168.0.113:8080/api/check/connect/db
+
+
+วิธี Deploy Vue
+1. วาง project ไว้ที่ /var/www/
+2. cd เข้าไปที่ project
+2.1 npm install
+3. สร้าง config กับ nginx
+3.1 cd ไปที่ /etc/nginx/sites-available/default
+3.2 sudo cp /etc/nginx/sites-available/default /etc/nginx/sites-available/posfe
+แก้ไฟล์ /etc/nginx/sites-available/posfe
+เป็น
+server {
+    listen      81;
+    server_name 192.168.0.113;
+    charset utf-8;
+    root    /var/www/pos_frontend_new/dist;
+    index   index.html index.htm;
+    # Always serve index.html for any request
+    # location / {
+    #    root /var/www/pos_fronten_new/dist;
+    #   try_files $uri /index.html;
+    #}
+    location ^~ / {
+            index  index.html index.htm;
+            try_files $uri $uri/ @rewrites;
+    }
+    location @rewrites {
+         rewrite ^.*$ /index.html last;
+    }
+    error_log  /var/log/nginx/vue-app-error.log;
+    access_log /var/log/nginx/vue-app-access.log;
+}
+
+3.4 sudo ln -s /etc/nginx/sites-available/posfe /etc/nginx/sites-enabled/
+*ถ้าขึ้นว่ามีไฟล์นี้แล้ว ให้ลบก่อน แล้วให้ทำ 3.4 อีกรอบ
+คำสั่งลบ sudo rm -rf /etc/nginx/sites-enabled/posfe
+3.5 sudo nginx -t
+3.6 sudo systemctl reload nginx
+4. ลองเข้า http://_ip_:port

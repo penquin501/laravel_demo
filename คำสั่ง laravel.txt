@@ -1,0 +1,17 @@
+composer create-project --prefer-dist laravel/laravel __ชื่อโปรเจ็ค_______
+php artisan --version
+php artisan route:list
+php artisan down ให้เวปเราอยู่ใน mode maintenance
+php artisan up
+php artisan route:cache
+
+หลังจาก create/clone project laravel8 ของคนอื่นมาใช้
+1.เปลี่ยน .env.example เป็น .env
+2.generate APP_KEY
+- php artisan key:generate
+3.migrate db
+- php artisan migrate
+4.run project
+- php artisan serve --port 8100
+5.migrating table
+- php artisan make:migration ____ชื่อคราส____
