@@ -1,0 +1,21 @@
+1. เริ่มจากสร้าง model ก่อน โดย ที่จะทำให้สร้างได้ทุกอย่างครบ ใน 1 คำสั่ง
+- php artisan make:model Category -c -m --policy -s --api
+    -c คือ controller
+    -m คือ migration
+    --policy คือ สร้าง policy ใน model
+    -s คือ seeder
+    --api คือ ทำให้ controller มี function CRUD
+2. ปรับ/แก้/เพิ่ม column ใน ไฟล์ที่ถูกสร้างขึ้นมาใน Migration จากนั้นทำการ migrate
+- php artisan migrate
+3. สร้าง Route ให้ใช้ CRUD ใน controller ได้เลย ในไฟล์ routes>api.php
+- Route::apiResource('/categories', CategoryController::class);
+4. สามารถเช็ค route ทั้งหมด ด้วยคำสั่ง
+- php artisan route:list
+5. สร้าง Service ของ CRUD
+6. เพิ่ม Error Handler ที่หัวข้อ Exceptions 
+7. เพิ่ม/กำหนด policy จะมีส่วนที่ทำกับตัว model
+    - สามารถสร้างเองได้
+    - php artisan make:policy __ชื่อไฟล์___
+    - ไฟล์จะอยู่ที่ app/policies
+    - หลังจากได้ policy มาแล้ว ให้ไป ปรับ/แก้ที่ app/Providers ที่ส่วน $policies ของไฟล์ AuthServiceProvider.php
+    - กำหนดใช้ที่ ตัว controller ส่วน __construct()

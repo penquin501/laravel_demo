@@ -1,0 +1,40 @@
+1.สร้าง model ที่ต้องการสร้าง relation ก่อน
+- php artisan make:model _ชื่อmodel_ -m 
+    Ex. php artisan make:model Product -m(คำสั่งสร้าง migration)
+2. ถ้ามีตารางอยู่แล้ว ต้องการให้เชื่อมกับ laravel โดยจะต้องใช้ Library เข้ามาช่วย
+    2.1 composer require --dev "kitloong/laravel-migrations-generator"
+    2.2 ใช้คำสั่ง
+        - php artisan migrate:generate --connection="connection_name"
+        - php artisan migrate:generate //ทั้งหมด
+        - php artisan migrate:generate --table="table1, table2, ..." //เฉพาะ table ที่ต้องการใช้
+        - php artisan migrate:generate --ignore="table3, table4, ..." //เฉพาะ table ที่ต้องการ ignore
+3. เรียกใช้ เป็น foreign key ของ table master ที่สร้างจาก laravel ได้แบบนี้ 
+    $table->foreignId('user_id')->constrained();
+    $table->foreignId('ชื่อtable_col'_id_' ')->constrained();
+    โดย laravel จะรู้ทันทีว่า เป็นตารางที่มี relation กัน
+4. แต่ถ้า เราสร้าง model ขึ้นมาเอง โดยที่ไม่ได้ใช้ id เป็น primary key จะต้องไปกำหนด col ที่เราต้องการให้เป็น primary key
+    Ex. 
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+
+    class CreateProductsTable extends Migration
+    {
+        Schema::table('products', function (Blueprint $table) {
+            $table->unsignedBigInteger('user_id');
+            $table->foreign('user_id')->references('id')->on('users');
+        });
+        ...
+    }
+5. กำหนดความสัมพันธ์ Many-to-Many นอกจากกำหนด foreign key ที่ model กลางแล้ว model master อื่นที่เกี่ยวข้องต้องกำหนดเพิ่มด้วย
+    Ex. 
+    class Product extends Model
+    {
+        use HasFactory;
+
+        ... 
+        
+        //many to many
+        public function users() {
+            return $this->belongsToMany(User::class, 'carts', 'product_id', 'user_id')->withPivot(['qty'])->withTimestamps();
+        }
+    }

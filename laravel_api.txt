@@ -1,0 +1,73 @@
+VS code Extention ที่ แนะนำ
+- PHP Snippet by VSCSnippets
+
+สร้าง Controller
+- php artisan make:controller (ชื่อ folder เพื่อไว้กำหนด path)\(ชื่อไฟล์ controller)
+    Ex. php artisan make:controller API\AuthController
+
+- ในไฟล์ api.php
+/* Ex. localhost/<project_name>/public/api/v1 */
+Route::prefix('v1')->group(function () {
+
+    /*  Ex. api/v1/register 
+        Route::post('__ชื่อpath api__', [___ชื่อ controller___::class, '__function ใน controller__']);
+        tip!!! พิมพ์ชื่อ controller บางส่วนแล้ว enter ตัว use จะมาเอง
+    */
+    Route::post('register', [AuthController::class, 'register']);
+
+    /* Ex. api/v1/login */
+    Route::post('login', [AuthController::class, 'login']);
+
+    /* Ex. api/v1/logout */
+    Route::post('logout', [AuthController::class, 'logout']);
+
+});
+- headers 'Content-Type': 'application/json'
+- ส่วนในการเขียน api
+    $user = new User();//Models
+    $user->name = $request->name;
+    $user->email = $request->email;
+    ...
+    $user->password = Hash::make($request->password);
+    $user->save();
+
+    return response()->json([
+        'status' => 'success'
+    ], 201);
+    
+    - กำหนด status code ของ http
+
+Models
+- อยู่ใน app>Models
+    - ชื่อ class Model จะไม่เป็น plural ซึ่งตัว laravel จะ map ให้อัตโนมัติ
+    - ถ้าจำเป็นต้องระบุชื่อ model ของตัวเองจริงๆ ต้องใส่ 
+        Ex. protected $table = 'my_category';
+        เพื่อระบุชื่อตารางให้กับตารางใน db ได้
+- สร้าง Models
+    - php artisan make:model Department / php artisan make:model Department -m
+    * -m = สร้าง migration ด้วย หลังจากสร้าง table ใหม่ 
+- สามารถใส่ข้อมูลที่ไม่ต้องการ/ซ่อนข้อมูล ส่งให้ใน Api ในส่วน Hidden 
+- ในส่วน casts สำหรับในการเปลี่ยน format ส่งให้ใน Api
+
+Form Request Validation  
+- อยู่ใน app>Http>Requests
+- php artisan make:request __ชื่อไฟล์___ 
+- เมื่อให้ controller เรียกใช้
+    Ex. 
+    use App\Http\Requests\RegisterRequest;
+    ...
+    class AuthController extends Controller
+    {
+        public function register(RegisterRequest $request) {
+            ...
+        }
+    }
+
+    *Tip! คือ พิมพ์ชื่อ Request แล้วเลือก snippet แล้ว code จะเรียก use ... มาอัตโนมัติ
+
+Services สำหรับการใช้ข้อมูลร่วมกันหลายๆ controller/model (ต้องสร้างขึ้นเอง)
+- *ตัวอย่างอยู่ที่ app/Services/Auth 
+- *เรียกใช้ที่ controller
+
+สร้าง Rules ให้กับ Object
+- php artisan make:rule __Uppercase(ชื่อRule)___ 

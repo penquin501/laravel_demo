@@ -1,0 +1,91 @@
+laravel sanctum 
+- เป็นระบบ authen ที่ Laravel มีมาให้ใช้แล้ว
+- ไฟล์ที่เกี่ยวข้อง config>sanctum.php
+- มี 2 แบบ 
+    - stateful API(ใช้ cookies) เหมาะกับ SPAs, Frontend Web App (Vue.js, Angular, React)
+    - stateless API(ใช้ token) เหมาะกับ mobile app (flutter, react native) หรือ SPAs ก็ได้ แต่ต้อง config ดีๆ
+- เพิ่ม SANCTUM_STATEFUL_DOMAINS ที่ .env สำหรับการใช้กับ FE Web app
+    - SANCTUM_STATEFUL_DOMAINS=_________
+- ถ้าเป็น token จะมีส่วนที่เกี่ยวข้อง คือ 'expiration' => null //ไม่มีหมดอายุ
+- ถ้าเป็น cookies จะต้องเพิ่มกำหนด ที่ session.php 
+    - ในส่วน 'lifetime' => env('SESSION_LIFETIME', 120), 
+    - ในส่วน 'domain' => env('SESSION_DOMAIN', null),
+    - ใน ไฟล์ .env
+        - เพิ่ม SESSION_DRIVER=cookies
+        - เพิ่ม SESSION_LIFETIME=120 //หน่วยเป็นนาที
+        - เพิ่ม SESSION_DOMAIN=.ssup.com
+    
+- cors ในกรณีที่ใช้ คนละ domain (BE กับ FE)
+    - ในไฟล์ cors.php ใช้กำหนด URL กับส่วนที่เป็น BE เพื่อให้ FE ยิง api มาได้ (เคส cors origin) โดยแก้
+        - ส่วนที่ 'paths' => ['api/*', 'sanctum/csrf-cookie'], 
+            เป็น 'paths' => ['api/v1/*', 'sanctum/csrf-cookie', 'register'], //ex. api.ssup.com/api/v1/cat
+        - ส่วนที่ 'supports_credentials' => false,
+            เป็น 'supports_credentials' => true,
+        * http ของ FE เช่น axios จะต้องใส่ axios.defaults.withCredentials = true; ด้วย ที่ global axios instance
+    - ในไฟล์ app/Http/Kernel.php
+        - ส่วนที่ 'api' => [
+                // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+                'throttle:api',
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ],
+            - ถ้าใช้ cookies ให้เอา comment ออก ที่บรรทัด \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            - ถ้าใช้ token ไม่ต้องไปยุ่งกับ บรรทัดนี้
+    - ในไฟล์ app/Models/User.php
+        - จะต้องกำหนด API Tokens โดยต้องมี
+            - การเรียกใช้ use Laravel\Sanctum\HasApiTokens; ในไฟล์นี้
+            -   class User extends Authenticatable {
+                    use HasApiTokens, HasFactory, Notifiable;
+                    ...
+                }
+    - FE ที่จะเรียกใช้ API จากตัวนี้ จะต้องส่ง Headers ทุกครั้ง
+            headers: {'Accept': application/json}
+        หรือ สามารถกำหนดที่ BE ได้เหมือนกัน โดยที่ FE ไม่ต้องส่งส่วนนี้มาทุกครั้ง โดยกำหนดที่แต่ละ api จะต้องใส่ส่วนที่เป็น Middleware
+        Ex. ไฟล์ที่เขียน API 
+        use App\Http\Middle\CheckAge;
+
+        Route::get('admin/profile', function () {
+            ...
+        })->middleware(CheckAge::class);
+
+        ส่วนใน ไฟล์ class
+        class CheckAge {
+            public function handle($request, Closure $next) {
+                ...
+
+                return $next($request);
+            }
+        }
+
+    - FE ก่อนจะ เข้าสู่การ Login ใดๆ จะต้องยิง api แบบข้างล่างนี้ เสมอ ป้องกันการโจมตี csrf
+        axios.get('/sanctum/csrf-cookie').then(response => {
+            // Login...
+        });
+    - Mobile App กำหนด ให้ api มีตามนี้ 
+        Route::post('/sanctum/token', function (Request $request) {
+             $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+                'device_name' => 'required',
+            ]);
+
+            $user = User::where('email', $request->email)->first();
+
+            if (! $user || ! Hash::check($request->password, $user->password)) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are incorrect.'],
+                ]);
+            }
+
+            return $user->createToken($request->device_name)->plainTextToken;
+        });
+- คำสั่ง สร้างไฟล์ middleware
+    - php artisan make:middleware ___ชื่อไฟล์____
+    Ex. php artisan make:middleware DefaultAcceptJson
+    - แก้ไฟล์ที่สร้าง app>Http>Middleware>DefaultAcceptJson.php
+    Ex. 
+    public function handle(Request $request, Closure $next)
+    {
+        $request->headers->set('Accept','application/json', true); /* เพิ่มบรรทัดนี้ */
+        return $next($request);
+    }
+    - เพิ่ม \App\Http\Middleware\DefaultAcceptJson::class, ที่ไฟล์ Kernel.php ในส่วน 'api' ด้วย

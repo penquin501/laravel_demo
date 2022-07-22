@@ -1,0 +1,73 @@
+create-project --prefer-dist laravel/laravel __ชื่อโปรเจ็ค_______
+php artisan --version
+php artisan route:list
+php artisan down ให้เวปเราอยู่ใน mode maintenance
+php artisan up
+php artisan route:cache
+
+หลังจาก create/clone project laravel8 ของคนอื่นมาใช้
+1.เปลี่ยน .env.example เป็น .env
+2.composer install
+3.generate APP_KEY
+- php artisan key:generate
+4.migrate db
+- php artisan migrate
+4.1 ลบข้อมูลเก่า ออก
+- php artisan migrate:fresh
+4.2 ลบข้อมูลทั้งหมด แล้วใส่ข้อมูลอันใหม่ล่าสุดเข้าไป
+- php artisan migrate:fresh --seed
+5.seed Data
+- php artisan db:seed
+6.migrating table
+- php artisan make:migration ____ชื่อคราส____
+- php artisan make:migration add_permission_to_users --table=users //เพิ่ม col ใน table
+7.run project
+- php artisan serve --port 8100
+
+
+ระหว่างทาง เกี่ยวกับการจัดการ db
+-เพิ่ม column
+1.สร้างไฟล์ migration ก่อน
+- php artisan make:migration add_permission_to_users(ชื่อไฟล์ migration) --table=users(ชื่อ table)
+2.แก้/เพิ่ม ในส่วนของ up() กับ down() ในไฟล์ migration ที่สร้างขึ้นมาเมื่อกี้
+Ex.
+public function up() {
+	Schema::table('users', function (Blueprint $table) {
+		$table->string('permission', 50)->default('users')->('password');
+	});
+}
+public function down() {
+	Schema::table('users', function (Blueprint $table) {
+		$table->dropColumn('permission');
+	});
+}
+3.php artisan migrate
+
+folder seeders จะเป็นส่วนที่ใช้เป็นข้อมูลที่จะเอาไว้ใช้ใน project เพื่อ เพิ่ม ข้อมูลเริ่มต้นใน table/ข้อมูลการตั้งค่าของ ระบบ
+1. สร้างไฟล์ seeder 
+- php artisan make:seeder <name>ชื่อไฟล์
+2.แก้ ในส่วน run() ในไฟล์ที่สร้างมา
+Ex.
+public function run()
+{
+    DB::table('users')->insert([
+        'name' => 'Admin',
+        'email' => 'admin@ssup.com'
+        'password' => Hash::make('123456'),
+        'permissin' => 'admin',
+        'created_at' => now(),
+        'updated_at' => now()
+    ]);
+}
+3. สั่งให้ เพิ่ม ข้อมูลเริ่มต้นใน table/ข้อมูลการตั้งค่าของ ระบบ
+- php artisan db:seed หรือ php artisan db:seed --class=UserSeeder //ระบุ class
+* หากรันไม่ได้ ลองใช้ composer dump-autoload ก่อน
+** ถ้าใช้ คำสั่ง ที่ Project สร้างมา จะ run ที่ไฟล์ DatabaseSeeder.php ก่อนเสมอ
+4. สามารถกำหนด คำสั่งการรันได้เอง ต้องไปแก้ที่ ไฟล์ DatabaseSeeder.php
+Ex. 
+public function run()
+    {
+        // \App\Models\User::factory(10)->create();
+        $this->call(UserAdminSeeder::class);
+    } 
+แล้ว run ด้วยคำสั่งนี้ php artisan db:seed ได้
